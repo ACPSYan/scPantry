@@ -53,11 +53,31 @@ rule map_edit_sites_to_genes:
         Rscript scripts/RNA_editing/map_edit_sites_to_genes.R {input.edit_sites} {input.ref_anno} {output.tsv}
         """
 
+rule thin_editing_sites:
+    input:
+        matrix = interm_dir / 'RNA_editing' / f'edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
+        site_to_gene = ref_dir / 'edit_sites_to_genes.tsv',
+    output:
+        matrix = interm_dir / 'RNA_editing' / f'reduced_edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
+        mapping = interm_dir / 'RNA_editing' / f'site_cluster_map.{edit_sites_min_coverage}cov.{edit_sites_min_samples}.tsv',
+    params:
+        corr_thresh = 0.9,
+    shell:
+        """
+        python3 scripts/RNA_editing/thin_editing_sites_by_gene.py \
+            --edit_matrix {input.matrix} \
+            --site_to_gene {input.site_to_gene} \
+            --output_matrix {output.matrix} \
+            --output_clusters {output.mapping} \
+            --correlation_threshold {params.corr_thresh}
+        """
+
+
 rule assemble_RNA_editing_bed:
     """Convert RNA editing matrix into BED file"""
     input:
-        matrix = interm_dir / 'RNA_editing' / f'edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
-        edit_sites_to_genes = ref_dir / 'edit_sites_to_genes.tsv',
+        matrix = interm_dir / 'RNA_editing' / f'reduced_edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
+        edit_sites_to_genes = interm_dir / 'RNA_editing' / f'site_cluster_map.{edit_sites_min_coverage}cov.{edit_sites_min_samples}.tsv',
         ref_anno = ref_anno,
     output:
         bed = output_dir / 'unnorm' / 'RNA_editing.bed',

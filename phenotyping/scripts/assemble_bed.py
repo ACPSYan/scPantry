@@ -190,13 +190,27 @@ def assemble_RNA_editing(data: Path, edit_sites_to_genes: Path, ref_anno: Path, 
     """
     df = pd.read_csv(data, sep='\t', dtype=str)
     sample_ids = list(df.columns[1:])  # Skip first column (site)
-    for col in sample_ids:
-        num_den = df[col].str.split('/', expand=True)
-        num = pd.to_numeric(num_den[0], errors='coerce')
-        den = pd.to_numeric(num_den[1], errors='coerce')
+    # for col in sample_ids:
+    #     num_den = df[col].str.split('/', expand=True)
+    #     num = pd.to_numeric(num_den[0], errors='coerce')
+    #     den = pd.to_numeric(num_den[1], errors='coerce')
         
-        # Add pseudocount and calculate fraction
-        df[col] = (num + 0.5) / (den + 0.5)
+    #     # Add pseudocount and calculate fraction
+    #     df[col] = (num + 0.5) / (den + 0.5)
+    for col in sample_ids:
+        if df[col].str.contains("/", na=False).any():
+            # Handle string fractions like "12/27"
+            num_den = df[col].str.split("/", expand=True)
+            num = pd.to_numeric(num_den[0], errors='coerce')
+            den = pd.to_numeric(num_den[1], errors='coerce')
+            df[col] = (num + 0.5) / (den + 0.5)
+        else:
+            # Already float values – no need to transform, just convert safely
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    
+        
+
     
     # Remove rows with >40% missing values
     missing_threshold = len(sample_ids) * 0.4
@@ -205,14 +219,23 @@ def assemble_RNA_editing(data: Path, edit_sites_to_genes: Path, ref_anno: Path, 
     # Replace remaining missing values with row means
     df[sample_ids] = df[sample_ids].apply(lambda x: x.fillna(x.mean()), axis=1)
     
-    site_to_gene = pd.read_csv(edit_sites_to_genes, sep='\t', header=None, names=['site', 'gene_id'])
+    #site_to_gene = pd.read_csv(edit_sites_to_genes, sep='\t', header=None, names=['site', 'gene_id'])
     
     # Add gene IDs (sites mapping to multiple genes are duplicated for each gene, sites mapping to no genes are dropped)
-    df = df.merge(site_to_gene, on='site', how='inner')
+    #df = df.merge(site_to_gene, on='site', how='inner')
+    site_to_cluster = pd.read_csv(edit_sites_to_genes, sep='\t',dtype=str)  # now this should have: site, gene, cluster_id
+
+    # Match by cluster_id (the index in your reduced matrix is cluster_id)
+    df = df.rename(columns={"site": "cluster_id"})
+    df = df.merge(site_to_cluster[['cluster_id', 'gene']], on='cluster_id', how='inner')
+    df = df.rename(columns={'gene': 'gene_id'})
+
     
     anno = load_tss(ref_anno)
     df = anno.merge(df, on='gene_id', how='inner')
-    df['phenotype_id'] = df['gene_id'] + '__' + df['site']
+
+    #df['phenotype_id'] = df['gene_id'] + '__' + df['site'] #we do no use site
+    df['phenotype_id'] = df['cluster_id']  # Use cluster_id as phenotype_id
     df = df[['#chr', 'start', 'end', 'phenotype_id'] + sample_ids]
     df.to_csv(bed, sep='\t', index=False, float_format='%g')
 

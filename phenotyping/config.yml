@@ -1,27 +1,27 @@
 ### Raw RNA-Seq data
-paired_end: True
-read_length: 75
-fastq_dir: input/fastq
-fastq_map: input/fastq_map.txt
+paired_end: False
+read_length: 98
+fastq_dir: ../../Onek1k/scRNAseq/allcell_fastqs_filtered
+fastq_map: ../../Onek1k/scRNAseq/allcell_fastqs_filtered/fastq_map.txt
 ## If paired_end is False, kallisto requires estimated fragment (NOT read) length and standard deviation:
-# fragment_length_mean: 200
-# fragment_length_sd: 50
+fragment_length_mean: 200
+fragment_length_sd: 50
 
 ### Reference files
 ## Download and unzip genome, e.g. http://ftp.ensembl.org/pub/release-106/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-ref_genome: input/ref/Homo_sapiens.GRCh38.dna.primary_assembly.chr1_0-2Mb.fa
+ref_genome: ref/Homo_sapiens.GRCh38.dna.primary_assembly.fa
 ## Download and unzip gene annotations, e.g. http://ftp.ensembl.org/pub/release-106/gtf/homo_sapiens/Homo_sapiens.GRCh38.106.gtf.gz
-ref_anno: input/ref/Homo_sapiens.GRCh38.106.chr1_0-2Mb.gtf
+ref_anno: ref/Homo_sapiens.GRCh38.106.gtf
 
 ### Samples to include (any samples in the FASTQ map but not listed here will be ignored):
-samples_file: input/samples.txt
+samples_file: ../../Onek1k/scRNAseq/allcell_fastqs_filtered/sample.txt
 
 ### RNA editing
 ## Edit sites reference file (make sure chromosome names are consistent with the reference genome)
-edit_sites_bed: input/ref/All.AG.stranded.annovar.Hg38_multianno.AnnoAlu.AnnoRep.NR.chr1_0-2Mb.nochr.bed
+edit_sites_bed: ref/All.AG.stranded.annovar.Hg38_multianno.AnnoAlu.AnnoRep.NR.nochr.bed
 ## Minimum coverage and samples required for a given site to be included. If there are fewer samples than this, the min_samples threshold is lowered to the number of samples.
 edit_sites_min_coverage: 20
-edit_sites_min_samples: 60
+edit_sites_min_samples: 120
 
 ### Optional parameters
 ## Path to intermediate file directory, in case you don't want it inside this project directory due to its size:
@@ -39,32 +39,32 @@ edit_sites_min_samples: 60
 ## Each group represents one or more modalities that are generated from the same
 ## software.
 modality_groups:
-  alt_TSS_polyA:
-    files:
-    - alt_TSS.bed.gz
-    - alt_TSS.bed.gz.tbi
-    - alt_TSS.phenotype_groups.txt
-    - alt_polyA.bed.gz
-    - alt_polyA.bed.gz.tbi
-    - alt_polyA.phenotype_groups.txt
-  expression:
-    files:
-    - expression.bed.gz
-    - expression.bed.gz.tbi
-    - isoforms.bed.gz
-    - isoforms.bed.gz.tbi
-    - isoforms.phenotype_groups.txt
+  # alt_TSS_polyA:
+  #   files:
+  #   - alt_TSS.bed.gz
+  #   - alt_TSS.bed.gz.tbi
+  #   - alt_TSS.phenotype_groups.txt
+  #   - alt_polyA.bed.gz
+  #   - alt_polyA.bed.gz.tbi
+  #   - alt_polyA.phenotype_groups.txt
+  # expression:
+  #   files:
+  #   - expression.bed.gz
+  #   - expression.bed.gz.tbi
+  #   - isoforms.bed.gz
+  #   - isoforms.bed.gz.tbi
+  #   - isoforms.phenotype_groups.txt
   RNA_editing:
     files:
     - RNA_editing.bed.gz
     - RNA_editing.bed.gz.tbi
     - RNA_editing.phenotype_groups.txt
-  splicing:
-    files:
-    - splicing.bed.gz
-    - splicing.bed.gz.tbi
-    - splicing.phenotype_groups.txt
-  stability:
-    files:
-    - stability.bed.gz
-    - stability.bed.gz.tbi
+  # splicing:
+  #   files:
+  #   - splicing.bed.gz
+  #   - splicing.bed.gz.tbi
+  #   - splicing.phenotype_groups.txt
+  # stability:
+  #   files:
+  #   - stability.bed.gz
+  #   - stability.bed.gz.tbi

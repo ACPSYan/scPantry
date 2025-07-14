@@ -23,7 +23,7 @@ def main():
         outputfile = outputfile[:-3]
 
     # Global variables
-    minbasequal = 20  # MINIMUM BASE QUALITY SCORE
+    minbasequal = 15  # MINIMUM BASE QUALITY SCORE, change
     minmapqual = 255  # MINIMUM READ MAPPING QUALITY SCORE. 255 FOR UNIQUE MAPPING WITH STAR
     sampath = "samtools"  # PATH TO THE SAMTOOLS EXECUTABLE
     offset = 33  # BASE QUALITY SCORE OFFSET - 33 FOR SANGER SCALE, 64 FOR ILLUMINA SCALE
@@ -43,7 +43,7 @@ def main():
     mpileup_cmd = [
         sampath, "mpileup",
         "-A", "-B",
-        "-d", "1000000",
+        "-d", "100000", #change
         "-q", str(minmapqual),
         "-Q", str(minbasequal),
         "-f", args.ref,
@@ -102,6 +102,40 @@ def main():
                     outfile.write(f"{fields[0]}\t{fields[2]}\t0\t0\tN/A\n")
             else:
                 outfile.write(f"{fields[0]}\t{fields[2]}\t0\t0\tN/A\n")
+    
+    
+    # with open(args.edit_sites, 'r') as infile, open(outputfile, 'w') as outfile:
+    #     outfile.write("#chrom\tposition\tcoverage\teditedreads\teditlevel\n")
+
+    #     for line in infile:
+    #         fields = line.strip().split()
+    #         if fields[0] == 'chromosome':
+    #             continue
+
+    #         chr_name, position = fields[0], fields[2]
+    #         location = f"{chr_name}_{position}"
+    #         strand = fields[5]
+
+    #         if location in sitehash:
+    #             refcount, ccount, gcount = map(int, sitehash[location].split(','))
+    #             if strand == '+':
+    #                 editedreads = gcount
+    #             else:
+    #                 editedreads = ccount
+
+    #             coverage = refcount + editedreads
+
+    #             if coverage > 0:
+    #                 editlevel = editedreads / coverage
+    #                 # Apply filtering thresholds
+    #                 if coverage >= 20 and editedreads >= 5 and editlevel >= 0.1:
+    #                     outfile.write(f"{chr_name}\t{position}\t{coverage}\t{editedreads}\t{editlevel:.3f}\n")
+    #                     all_zeros = False
+    #             else:
+    #                 outfile.write(f"{chr_name}\t{position}\t0\t0\tN/A\n")
+    #         else:
+    #             outfile.write(f"{chr_name}\t{position}\t0\t0\tN/A\n")
+
 
     if all_zeros:
         # Clean up output file before raising error
