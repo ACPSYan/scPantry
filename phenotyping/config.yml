@@ -39,32 +39,32 @@ edit_sites_min_samples: 120
 ## Each group represents one or more modalities that are generated from the same
 ## software.
 modality_groups:
-  # alt_TSS_polyA:
-  #   files:
-  #   - alt_TSS.bed.gz
-  #   - alt_TSS.bed.gz.tbi
-  #   - alt_TSS.phenotype_groups.txt
-  #   - alt_polyA.bed.gz
-  #   - alt_polyA.bed.gz.tbi
-  #   - alt_polyA.phenotype_groups.txt
-  # expression:
-  #   files:
-  #   - expression.bed.gz
-  #   - expression.bed.gz.tbi
-  #   - isoforms.bed.gz
-  #   - isoforms.bed.gz.tbi
-  #   - isoforms.phenotype_groups.txt
-  RNA_editing:
+  alt_TSS_polyA:
     files:
-    - RNA_editing.bed.gz
-    - RNA_editing.bed.gz.tbi
-    - RNA_editing.phenotype_groups.txt
-  # splicing:
+    - alt_TSS.bed.gz
+    - alt_TSS.bed.gz.tbi
+    - alt_TSS.phenotype_groups.txt
+    - alt_polyA.bed.gz
+    - alt_polyA.bed.gz.tbi
+    - alt_polyA.phenotype_groups.txt
+  expression:
+    files:
+    - expression.bed.gz
+    - expression.bed.gz.tbi
+    - isoforms.bed.gz
+    - isoforms.bed.gz.tbi
+    - isoforms.phenotype_groups.txt
+  # RNA_editing:
   #   files:
-  #   - splicing.bed.gz
-  #   - splicing.bed.gz.tbi
-  #   - splicing.phenotype_groups.txt
-  # stability:
-  #   files:
-  #   - stability.bed.gz
-  #   - stability.bed.gz.tbi
+  #   - RNA_editing.bed.gz
+  #   - RNA_editing.bed.gz.tbi
+  #   - RNA_editing.phenotype_groups.txt
+  splicing:
+    files:
+    - splicing.bed.gz
+    - splicing.bed.gz.tbi
+    - splicing.phenotype_groups.txt
+  stability:
+    files:
+    - stability.bed.gz
+    - stability.bed.gz.tbi
