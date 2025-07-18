@@ -54,11 +54,11 @@ modality_groups:
     - isoforms.bed.gz
     - isoforms.bed.gz.tbi
     - isoforms.phenotype_groups.txt
-  # RNA_editing:
-  #   files:
-  #   - RNA_editing.bed.gz
-  #   - RNA_editing.bed.gz.tbi
-  #   - RNA_editing.phenotype_groups.txt
+  RNA_editing:
+    files:
+    - RNA_editing.bed.gz
+    - RNA_editing.bed.gz.tbi
+    - RNA_editing.phenotype_groups.txt
   splicing:
     files:
     - splicing.bed.gz

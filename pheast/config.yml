@@ -1,20 +1,20 @@
 ### Point to the Pantry output directory containing BED files:
-# phenotype_dir: ../phenotyping/output
+phenotype_dir: ../phenotyping/output
 ## Since the tables produced by the main test dataset may be too small for
 ## downstream analyses, the Pheast tests use another test dataset produced by
 ## Pheast/scripts/test_prepare_data.sh:
-phenotype_dir: input/phenotypes
+#phenotype_dir: input/phenotypes
 
 ### Give the path prefix to genotypes in plink1 (bed/bim/fam) format:
-geno_prefix: input/GEUVADIS.445_samples.GRCh38.chr1
+geno_prefix: ../genomic_data/filtered_final_mac10
 
 ### Samples to include:
-samples_file: input/samples.txt
+samples_file: ../../Onek1k/scRNAseq/allcell_fastqs_filtered/sample.txt
 
 ### Optional parameters
 ## Provide a list of SNP IDs to include when computing TWAS weights:
 ## It is recommended to include only SNPs present in the LD reference used later for TWAS.
-twas_snps: input/ld_snps_chr1.txt
+twas_snps: ../../Onek1k/genotype/LDREF_b38ids/ldref.combined.bim
 ## Path to intermediate file directory, in case you don't want it inside this project directory due to its size:
 ## This directory will be created if it doesn't exist, and will contain any generated (i.e. not input) files besides the final analysis results.
 # intermediate_dir: intermediate
@@ -29,27 +29,27 @@ modalities:
   #   grouped: true
   alt_polyA:
     grouped: true
-  # alt_TSS:
-  #   grouped: true
+  alt_TSS:
+    grouped: true
   expression:
     grouped: false
-  # isoforms:
-  #   grouped: true
-  # RNA_editing:
-  #   grouped: true
-  # splicing:
-  #   grouped: true
-  # stability:
-  #   grouped: false
+  isoforms:
+    grouped: true
+  RNA_editing:
+    grouped: true
+  splicing:
+    grouped: true
+  stability:
+    grouped: false
 
 ### Analyses
 ## List the analyses to run. A snakefile will be loaded for each analysis,
 ## steps/{analysis}.smk, and results will be written to output/{analysis}/.
 ## {modality} will be replaced with each modality name.
 analyses:
-  heritability:
-    files:
-    - '{modality}.hsq.tsv'
+  # heritability:
+  #   files:
+  #   - '{modality}.hsq.tsv'
   qtl:
     files:
     - '{modality}.cis_qtl.txt.gz'

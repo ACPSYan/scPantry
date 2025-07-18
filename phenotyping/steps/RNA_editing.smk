@@ -1,6 +1,3 @@
-localrules:
-    map_edit_sites_to_genes,
-
 rule query_editing_level:
     input:
         edit_sites = edit_sites_bed,
@@ -50,7 +47,7 @@ rule map_edit_sites_to_genes:
         tsv = ref_dir / 'edit_sites_to_genes.tsv',
     shell:
         """
-        Rscript scripts/RNA_editing/map_edit_sites_to_genes.R {input.edit_sites} {input.ref_anno} {output.tsv}
+        Rscript scripts/RNA_editing/map_edit_sites_to_genes_strandaware.R {input.edit_sites} {input.ref_anno} {output.tsv}
         """
 
 rule thin_editing_sites:
@@ -61,7 +58,7 @@ rule thin_editing_sites:
         matrix = interm_dir / 'RNA_editing' / f'reduced_edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
         mapping = interm_dir / 'RNA_editing' / f'site_cluster_map.{edit_sites_min_coverage}cov.{edit_sites_min_samples}.tsv',
     params:
-        corr_thresh = 0.9,
+        corr_thresh = 0.8,
     shell:
         """
         python3 scripts/RNA_editing/thin_editing_sites_by_gene.py \
@@ -77,7 +74,6 @@ rule assemble_RNA_editing_bed:
     """Convert RNA editing matrix into BED file"""
     input:
         matrix = interm_dir / 'RNA_editing' / f'reduced_edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
-        edit_sites_to_genes = interm_dir / 'RNA_editing' / f'site_cluster_map.{edit_sites_min_coverage}cov.{edit_sites_min_samples}.tsv',
         ref_anno = ref_anno,
     output:
         bed = output_dir / 'unnorm' / 'RNA_editing.bed',
@@ -92,7 +88,6 @@ rule assemble_RNA_editing_bed:
             --type RNA_editing \
             --input {input.matrix} \
             --ref_anno {input.ref_anno} \
-            --edit_sites_to_genes {input.edit_sites_to_genes} \
             --output {output.bed}
         """
 
@@ -112,7 +107,9 @@ rule normalize_RNA_editing:
             --input {input.bed} \
             --samples {input.samples} \
             --output {params.bed}
-        bgzip {params.bed}
+        (head -n 1 {params.bed} && tail -n +2 {params.bed} | sort -k1,1 -k2,2n) > {params.bed}.sorted
+        bgzip -c {params.bed}.sorted > {output}
+        rm {params.bed}.sorted
         """
 
 rule RNA_editing_pheno_groups:

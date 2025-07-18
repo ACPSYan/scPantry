@@ -67,7 +67,15 @@ def main():
             continue
 
         # Convert ratios to float edit levels
-        float_matrix = submatrix.applymap(lambda val: float(val.split("/")[0]) / float(val.split("/")[1]) if "/" in val and val != "0/0" and float(val.split("/")[1]) > 0 else np.nan)
+        # 1) split every column into two DataFrames (nums and dens)
+        num = submatrix.apply(lambda col: col.str.split("/", expand=True)[0].astype(float), axis=0)
+        den = submatrix.apply(lambda col: col.str.split("/", expand=True)[1].astype(float), axis=0)
+
+        # 2) compute the fraction with pseudocounts
+        float_matrix = (num + 0.5) / (den + 0.5)
+
+        # 3) mask any “0/0” or invalid denominator as NaN
+        float_matrix = float_matrix.mask(den == 0)
 
         clusters = cluster_sites(float_matrix, args.correlation_threshold)
         for cluster_id, sites in clusters.items():
@@ -92,3 +100,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

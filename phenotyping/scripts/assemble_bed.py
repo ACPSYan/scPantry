@@ -180,64 +180,98 @@ def assemble_latent(data: Path, ref_anno: Path, bed: Path):
     df = df[['#chr', 'start', 'end', 'phenotype_id'] + sample_ids]
     df.to_csv(bed, sep='\t', index=False, float_format='%g')
 
-def assemble_RNA_editing(data: Path, edit_sites_to_genes: Path, ref_anno: Path, bed: Path):
-    """Convert RNA editing output into BED file
-    
-    Input data columns after 'site' contain fractions (e.g. '12/27'). These are processed by:
-    1. Adding pseudocount of 0.5 to numerator and denominator
-    2. Removing rows with >40% missing values
-    3. Replacing remaining missing values with row means
+def assemble_RNA_editing(data: Path, ref_anno: Path, bed: Path):
     """
-    df = pd.read_csv(data, sep='\t', dtype=str)
-    sample_ids = list(df.columns[1:])  # Skip first column (site)
-    # for col in sample_ids:
-    #     num_den = df[col].str.split('/', expand=True)
-    #     num = pd.to_numeric(num_den[0], errors='coerce')
-    #     den = pd.to_numeric(num_den[1], errors='coerce')
-        
-    #     # Add pseudocount and calculate fraction
-    #     df[col] = (num + 0.5) / (den + 0.5)
-    for col in sample_ids:
-        if df[col].str.contains("/", na=False).any():
-            # Handle string fractions like "12/27"
-            num_den = df[col].str.split("/", expand=True)
-            num = pd.to_numeric(num_den[0], errors='coerce')
-            den = pd.to_numeric(num_den[1], errors='coerce')
-            df[col] = (num + 0.5) / (den + 0.5)
-        else:
-            # Already float values – no need to transform, just convert safely
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+    data:           reduced_edMat…tsv  (rows are clusters, values are floats or “NA”)
+    ref_anno:       GTF for load_tss()
+    bed:            output BED path
+    """
 
-    
-        
+    # 1) load reduced matrix, rename its first column to phenotype_id
+    df = pd.read_csv(data, sep="\t", dtype=str)
+    df = df.rename(columns={df.columns[0]: "phenotype_id"})
+    sample_ids = df.columns.drop("phenotype_id")
 
-    
-    # Remove rows with >40% missing values
-    missing_threshold = len(sample_ids) * 0.4
-    df = df[df[sample_ids].isna().sum(axis=1) <= missing_threshold]
-    
-    # Replace remaining missing values with row means
-    df[sample_ids] = df[sample_ids].apply(lambda x: x.fillna(x.mean()), axis=1)
-    
-    #site_to_gene = pd.read_csv(edit_sites_to_genes, sep='\t', header=None, names=['site', 'gene_id'])
-    
-    # Add gene IDs (sites mapping to multiple genes are duplicated for each gene, sites mapping to no genes are dropped)
-    #df = df.merge(site_to_gene, on='site', how='inner')
-    site_to_cluster = pd.read_csv(edit_sites_to_genes, sep='\t',dtype=str)  # now this should have: site, gene, cluster_id
+    # 2) coerce all sample columns to numeric floats
+    df[sample_ids] = df[sample_ids].apply(pd.to_numeric, errors="coerce")
 
-    # Match by cluster_id (the index in your reduced matrix is cluster_id)
-    df = df.rename(columns={"site": "cluster_id"})
-    df = df.merge(site_to_cluster[['cluster_id', 'gene']], on='cluster_id', how='inner')
-    df = df.rename(columns={'gene': 'gene_id'})
+    # 3) drop any cluster/phenotype with >40% missing
+    max_na = len(sample_ids) * 0.4
+    df = df[df[sample_ids].isna().sum(axis=1) <= max_na]
 
-    
-    anno = load_tss(ref_anno)
-    df = anno.merge(df, on='gene_id', how='inner')
+    # 4) impute remaining missing entries with the row mean
+    df[sample_ids] = df[sample_ids].apply(lambda row: row.fillna(row.mean()), axis=1)
 
-    #df['phenotype_id'] = df['gene_id'] + '__' + df['site'] #we do no use site
-    df['phenotype_id'] = df['cluster_id']  # Use cluster_id as phenotype_id
-    df = df[['#chr', 'start', 'end', 'phenotype_id'] + sample_ids]
+    # 5) extract gene_id from the cluster name, e.g. “ENSG…__Cluster_123” → ENSG…
+    df['gene_id'] = df['phenotype_id'].str.split("__").str[0]
+
+    # 6) pull in chr/start/end from your TSS table
+    anno = load_tss(ref_anno)   # returns ['#chr','start','end','gene_id']
+    df = df.merge(anno, on='gene_id', how='inner')
+
+    # 7) reorder and write
+    df = df[['#chr', 'start', 'end', 'phenotype_id'] + list(sample_ids)]
     df.to_csv(bed, sep='\t', index=False, float_format='%g')
+
+
+     
+
+
+
+# def assemble_RNA_editing(data: Path, edit_sites_to_genes: Path, ref_anno: Path, bed: Path):
+#     """Convert RNA editing output into BED file
+    
+#     Input data columns after 'site' contain fractions (e.g. '12/27'). These are processed by:
+#     1. Adding pseudocount of 0.5 to numerator and denominator
+#     2. Removing rows with >40% missing values
+#     3. Replacing remaining missing values with row means
+#     """
+#     df = pd.read_csv(data, sep='\t', dtype=str)
+#     sample_ids = list(df.columns[1:])  # Skip first column (site)
+#     # for col in sample_ids:
+#     #     num_den = df[col].str.split('/', expand=True)
+#     #     num = pd.to_numeric(num_den[0], errors='coerce')
+#     #     den = pd.to_numeric(num_den[1], errors='coerce')
+        
+#     #     # Add pseudocount and calculate fraction
+#     #     df[col] = (num + 0.5) / (den + 0.5)
+#     for col in sample_ids:
+#         if df[col].str.contains("/", na=False).any():
+#             # Handle string fractions like "12/27"
+#             num_den = df[col].str.split("/", expand=True)
+#             num = pd.to_numeric(num_den[0], errors='coerce')
+#             den = pd.to_numeric(num_den[1], errors='coerce')
+#             df[col] = (num + 0.5) / (den + 0.5)
+#         else:
+#             # Already float values – no need to transform, just convert safely
+#             df[col] = pd.to_numeric(df[col], errors='coerce')
+
+#      # Remove rows with >40% missing values
+#     missing_threshold = len(sample_ids) * 0.4
+#     df = df[df[sample_ids].isna().sum(axis=1) <= missing_threshold]
+    
+#     # Replace remaining missing values with row means
+#     df[sample_ids] = df[sample_ids].apply(lambda x: x.fillna(x.mean()), axis=1)
+    
+#     #site_to_gene = pd.read_csv(edit_sites_to_genes, sep='\t', header=None, names=['site', 'gene_id'])
+    
+#     # Add gene IDs (sites mapping to multiple genes are duplicated for each gene, sites mapping to no genes are dropped)
+#     #df = df.merge(site_to_gene, on='site', how='inner')
+#     site_to_cluster = pd.read_csv(edit_sites_to_genes, sep='\t',dtype=str)  # now this should have: site, gene, cluster_id
+
+#     # Match by cluster_id (the index in your reduced matrix is cluster_id)
+#     df = df.rename(columns={"site": "cluster_id"})
+#     df = df.merge(site_to_cluster[['cluster_id', 'gene']], on='cluster_id', how='inner')
+#     df = df.rename(columns={'gene': 'gene_id'})
+
+    
+#     anno = load_tss(ref_anno)
+#     df = anno.merge(df, on='gene_id', how='inner')
+
+#     #df['phenotype_id'] = df['gene_id'] + '__' + df['site'] #we do no use site
+#     df['phenotype_id'] = df['cluster_id']  # Use cluster_id as phenotype_id
+#     df = df[['#chr', 'start', 'end', 'phenotype_id'] + sample_ids]
+#     df.to_csv(bed, sep='\t', index=False, float_format='%g')
 
 def assemble_splicing(counts: Path, ref_anno: Path, bed: Path, min_frac: float = 0.05, max_frac: float = 0.95):
     """Convert leafcutter output into splicing BED file"""
@@ -298,7 +332,7 @@ parser.add_argument('--input-dir', type=Path, required=False, help='Directory co
 parser.add_argument('--input-dir2', type=Path, required=False, help='Second input directory, for phenotype groups with per-sample input files in two directories')
 parser.add_argument('--samples', type=Path, required=False, help='File listing sample IDs, for phenotype groups with per-sample input files')
 parser.add_argument('--ref_anno', type=Path, required=True, help='Reference annotation file')
-parser.add_argument('--edit_sites_to_genes', type=Path, required=False, help='For RNA editing, file mapping edit sites to genes')
+#parser.add_argument('--edit_sites_to_genes', type=Path, required=False, help='For RNA editing, file mapping edit sites to genes')
 parser.add_argument('--output', type=Path, required=True, help='Output file ("*.bed")')
 parser.add_argument('--output2', type=Path, required=False, help='Second output file ("*.bed") for phenotype groups with two output files, e.g. log2 and tpm expression')
 args = parser.parse_args()
@@ -313,8 +347,8 @@ elif args.type == 'expression':
 elif args.type == 'latent':
     assemble_latent(args.input, args.ref_anno, args.output)
 elif args.type == 'RNA_editing':
-    assert args.edit_sites_to_genes is not None, 'RNA editing requires --edit_sites_to_genes'
-    assemble_RNA_editing(args.input, args.edit_sites_to_genes, args.ref_anno, args.output)
+    #assert args.edit_sites_to_genes is not None, 'RNA editing requires --edit_sites_to_genes'
+    assemble_RNA_editing(args.input, args.ref_anno, args.output)
 elif args.type == 'splicing':
     assemble_splicing(args.input, args.ref_anno, args.output, min_frac=0.05, max_frac=0.95)
 elif args.type == 'stability':
