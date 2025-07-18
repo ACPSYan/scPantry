@@ -20,3 +20,6 @@ phenotyping/ref/Homo_sapiens.GRCh38.106.gtf
 phenotyping/ref/Homo_sapiens.GRCh38.dna.primary_assembly.fa
 phenotyping/ref/Homo_sapiens.GRCh38.106.gtf
 phenotyping/ref/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+genomic_data/filtered_final_mac10.bed
+genomic_data/filtered_final_mac10.bim
+genomic_data/filtered_final_mac10.fam
