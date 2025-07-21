@@ -58,7 +58,7 @@ rule thin_editing_sites:
         matrix = interm_dir / 'RNA_editing' / f'reduced_edMat.{edit_sites_min_coverage}cov.{edit_sites_min_samples}samps.tsv',
         mapping = interm_dir / 'RNA_editing' / f'site_cluster_map.{edit_sites_min_coverage}cov.{edit_sites_min_samples}.tsv',
     params:
-        corr_thresh = 0.8,
+        corr_thresh = 0.9,
     shell:
         """
         python3 scripts/RNA_editing/thin_editing_sites_by_gene.py \
@@ -107,7 +107,7 @@ rule normalize_RNA_editing:
             --input {input.bed} \
             --samples {input.samples} \
             --output {params.bed}
-        (head -n 1 {params.bed} && tail -n +2 {params.bed} | sort -k1,1 -k2,2n) > {params.bed}.sorted
+        sort -k1,1 -k2,2n {params.bed} > {params.bed}.sorted
         bgzip -c {params.bed}.sorted > {output}
         rm {params.bed}.sorted
         """

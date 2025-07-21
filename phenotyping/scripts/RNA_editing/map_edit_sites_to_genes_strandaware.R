@@ -11,6 +11,7 @@
 library(GenomicRanges)
 library(rtracklayer)
 library(tidyverse)
+library(glue)
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 3) {
@@ -43,10 +44,9 @@ keep_autos <- as.character(1:22)
 sites_gr   <- keepSeqlevels(sites_gr, keep_autos, pruning.mode="coarse")
 
 message("2) Importing GTF and extracting gene bodies…")
-gtf   <- import(gtf_file, format="gtf")
-genes <- gtf[ mcols(gtf)$type == "gene" ]
+genes   <- import(gtf_file, format="gtf", features="gene")
 gene_body_gr <- keepSeqlevels(genes, keep_autos, pruning.mode="coarse")
-mcols(gene_body_gr)$gene_id <- mcols(gene_body_gr)$gene_id
+mcols(gene_body_gr)$gene_id <- mcols(genes)$gene_id
 
 # build TSS GRanges
 tss_pos <- ifelse(strand(gene_body_gr) == "+",
@@ -73,7 +73,7 @@ hits_df <- tibble(
   mutate(
     site_id = mcols(sites_gr)$site_id[site_idx],
     gene_id = mcols(gene_body_gr)$gene_id[gene_idx],
-    tss_pos = start(tss_gr)[match(gene_id, mcols(tss_gr)$gene_id)],
+    tss_pos = start(tss_gr)[gene_idx],
     site_pos = start(sites_gr)[site_idx]
   ) %>%
   select(site_id, gene_id, tss_pos, site_pos)
