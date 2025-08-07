@@ -1,0 +1,149 @@
+import pandas as pd
+
+configfile: 'config.yaml'
+
+# traits = config['traits']
+# traits = pd.read_csv('data/gwas/gwas_metadata.txt', sep='\t')['Tag'].tolist()
+trait_df = pd.read_csv('data/gwas/gwas_metadata.txt', sep='\t')
+traits = trait_df['Tag'].tolist()
+gwas_n = {traits[i]: n for i, n in enumerate(trait_df['Sample_Size'].tolist())}
+
+chroms = [f'{i + 1}' for i in range(22)]
+
+localrules:
+    # sumstats,
+    # top_gwas_for_plotting,
+
+rule all:
+    input:
+        # expand('data/intermediate/sumstats/{trait}.sumstats', trait=traits),
+        # f'data/intermediate/assoc_expression/{traits[0]}/expression.{traits[0]}.1.tsv',
+        # f'data/output/expression/fusion.Geuvadis.expression.{traits[0]}.tsv',
+        expand('data/output/{modality}/fusion.{modality}.{trait}.tsv', modality=config['modalities'], trait=traits),
+        # expand('data/intermediate/top_gwas/{trait}.tsv.gz', trait=traits),
+
+rule sumstats:
+    input:
+        'data/gwas/imputed_gwas_hg38_1.1/imputed_{trait}.txt.gz'
+    output:
+        'data/intermediate/sumstats/{trait}.sumstats'
+    params:
+        output_dir = 'data/intermediate/sumstats',
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        echo -e "SNP\tA1\tA2\tZ" > {output}
+        zcat {input} | tail -n+2 | awk -F'\\t' '{{print $3":"$4, $5, $6, $10}}' OFS='\\t'  >> {output}
+        """
+
+# rule assoc_test:
+#     input:
+#         sumstats = 'data/intermediate/sumstats/{trait}.sumstats',
+#         weights = f'{config["path_to_weights"]}/{{modality}}.pos',
+#         ref_ld_chr = multiext(f'{config["ld_plink_prefix"]}.{{chrom}}', '.bed', '.bim', '.fam'),
+#     output:
+#         'data/intermediate/assoc_{modality}/{trait}/{modality}.{trait}.{chrom}.tsv'
+#     params:
+#         output_dir = 'data/intermediate/assoc_{modality}/{trait}',
+#         weights_dir = config["path_to_weights"],
+#         ref_ld_prefix = f'{config["ld_plink_prefix"]}.',
+#     shell:
+#         """
+#         mkdir -p {params.output_dir}
+#         Rscript scripts/FUSION.assoc_test.R \
+#             --sumstats {input.sumstats} \
+#             --weights {input.weights} \
+#             --weights_dir {params.weights_dir} \
+#             --ref_ld_chr {params.ref_ld_prefix} \
+#             --chr {wildcards.chrom} \
+#             --out {output}
+#         """
+
+rule assoc_test_trait:
+    """Run all chromosomes for a trait together to submit fewer jobs"""
+    input:
+        sumstats = 'data/intermediate/sumstats/{trait}.sumstats',
+        weights = f'{config["path_to_weights"]}/{{modality}}.pos',
+        ref_ld_chr = expand(f'{config["ld_plink_prefix"]}.{{chrom}}.{{ext}}', chrom=chroms, ext=['bed', 'bim', 'fam']),
+    output:
+        expand('data/intermediate/assoc_{{modality}}/{{trait}}/{{modality}}.{{trait}}.{chrom}.tsv', chrom=chroms)
+    params:
+        output_dir = 'data/intermediate/assoc_{modality}/{trait}',
+        weights_dir = config["path_to_weights"],
+        ref_ld_prefix = f'{config["ld_plink_prefix"]}.',
+        chroms = ' '.join(chroms),
+        coloc_p = '5e-8', # Hits with p below this are tested for coloc, recommended to be TWAS threshold. Currently using 5e-8 / 6, but it's subject to change so I'll raise the threshold here.
+        gwas_n = lambda w: gwas_n[w.trait],
+    group: 'twas'
+    threads: 16
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        parallel -j {threads} \
+            Rscript scripts/FUSION.assoc_test.R \
+                --sumstats {input.sumstats} \
+                --weights {input.weights} \
+                --weights_dir {params.weights_dir} \
+                --ref_ld_chr {params.ref_ld_prefix} \
+                --chr {{}} \
+                --coloc_P {params.coloc_p} \
+                --GWASN {params.gwas_n} \
+                --out {params.output_dir}/{wildcards.modality}.{wildcards.trait}.{{}}.tsv \
+            ::: {params.chroms}
+        """
+
+rule assemble_assoc_tests:
+    input:
+        expand('data/intermediate/assoc_{{modality}}/{{trait}}/{{modality}}.{{trait}}.{chrom}.tsv', chrom=chroms)
+    output:
+        out = 'data/output/{modality}/fusion.{modality}.{trait}.tsv'
+    params:
+        output_dir = 'data/output/{modality}',
+    group: 'twas'
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        head -n1 {input[0]} | cut -f3- > {output.out}
+        for fname in {input}; do
+            tail -n+2 $fname | cut -f3- >> {output.out}
+        done
+        """
+
+# rule post_process:
+#     input:
+#         sumstats = 'data/intermediate/sumstats/{trait}/{trait}.{chrom}.sumstats',
+#         ref_ld_chr = multiext('data/ref_ld/Brain.{chrom}', '.bed', '.bim', '.fam'),
+#         twas = 'data/output/{trait}/{trait}.{chrom}.tsv',
+#     output:
+#         'data/output/{trait}/{trait}.{chrom}.tsv.analysis.joint_included.dat',
+#     params:
+#         output_prefix = 'data/output/{trait}/{trait}.{chrom}.tsv.analysis',
+#         ref_ld_prefix = 'data/ref_ld/Brain.',
+#     shell:
+#         """
+#         Rscript scripts/FUSION.post_process.R \
+#             --sumstats {input.sumstats} \
+#             --input {input.twas} \
+#             --out {params.output_prefix} \
+#             --ref_ld_chr {params.ref_ld_prefix} \
+#             --chr {wildcards.chrom} \
+#             --plot --locus_win 100000
+#         """
+
+# rule top_gwas_for_plotting:
+#     input:
+#         expand('data/gwas/results/chr{chrom}_{{trait}}.mlma', chrom=chroms)
+#     output:
+#         'data/intermediate/top_gwas/{trait}.tsv.gz'
+#     params:
+#         top_gwas_dir = 'data/intermediate/top_gwas',
+#         out_tmp = 'data/intermediate/top_gwas/{trait}.tsv',
+#     shell:
+#         """
+#         mkdir -p {params.top_gwas_dir}
+#         head -n1 {input[0]} | cut -f1,3,9 > {params.out_tmp}
+#         for fname in {input}; do
+#             tail -n+2 $fname | awk '$9<0.05' | cut -f1,3,9 >> {params.out_tmp}
+#         done
+#         gzip {params.out_tmp}
+#         """

@@ -180,7 +180,7 @@ def assemble_latent(data: Path, ref_anno: Path, bed: Path):
     df = df[['#chr', 'start', 'end', 'phenotype_id'] + sample_ids]
     df.to_csv(bed, sep='\t', index=False, float_format='%g')
 
-def assemble_RNA_editing(data: Path, ref_anno: Path, bed: Path):
+def assemble_RNA_editing(data: Path, ref_anno: Path, bed: Path, min_na_frac: float = 0.4):
     """
     data:           reduced_edMat…tsv  (rows are clusters, values are floats or “NA”)
     ref_anno:       GTF for load_tss()
@@ -196,7 +196,7 @@ def assemble_RNA_editing(data: Path, ref_anno: Path, bed: Path):
     df[sample_ids] = df[sample_ids].apply(pd.to_numeric, errors="coerce")
 
     # 3) drop any cluster/phenotype with >40% missing
-    max_na = len(sample_ids) * 0.4
+    max_na = len(sample_ids) * min_na_frac
     df = df[df[sample_ids].isna().sum(axis=1) <= max_na]
 
     # 4) impute remaining missing entries with the row mean
@@ -210,8 +210,9 @@ def assemble_RNA_editing(data: Path, ref_anno: Path, bed: Path):
     df = df.merge(anno, on='gene_id', how='inner')
 
     # 7) reorder and write
-    df = df[['#chr', 'start', 'end', 'phenotype_id'] + list(sample_ids)]
-    df.to_csv(bed, sep='\t', index=False, float_format='%g')
+    cols = ['#chr', 'start', 'end', 'phenotype_id'] + list(sample_ids)
+    df = df[cols]
+    df.to_csv(bed, sep='\t', header=True, index=False, float_format='%g')
 
 
      

@@ -1,0 +1,14 @@
+path_to_weights: ../pheast/intermediate/twas
+ld_plink_prefix: data/LDREF_1k1k/1000G.EUR
+modalities:
+- alt_polyA
+- alt_TSS
+- expression
+- isoforms
+- splicing
+- stability
+- RNA_editing
+# traits:
+# - UKB_1160_Sleep_duration
+# - UKB_1180_Morning_or_evening_person_chronotype
+# - UKB_1200_Sleeplessness_or_insomnia
